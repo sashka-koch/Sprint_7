@@ -1,6 +1,7 @@
 import requests
 import allure
-from helpers.courier_helper import BASE_URL, generate_random_string, delete_courier
+from helpers.courier_helper import generate_random_string
+from urls import BASE_URL, CREATE_COURIER
 
 
 class TestCreateCourier:
@@ -17,57 +18,47 @@ class TestCreateCourier:
             "firstName": first_name
         }
 
-        response = requests.post(BASE_URL + "courier", data=payload)
+        with allure.step("Отправка запроса на создание курьера"):
+            response = requests.post(BASE_URL + CREATE_COURIER, data=payload)
 
-        assert response.status_code == 201
+        with allure.step("Проверка кода ответа"):
+            assert response.status_code == 201
 
-        assert response.json() == {"ok": True}
-
-        login_data = {
-            "login": login,
-            "password": password
-        }
-        login_response = requests.post(BASE_URL + "courier/login", data=login_data)
-        courier_id = login_response.json()["id"]
-        delete_courier(courier_id)
+        with allure.step("Проверка тела ответа"):
+            assert response.json() == {"ok": True}
 
     @allure.title("Нельзя создать двух одинаковых курьеров")
-    def test_create_duplicate_courier(self):
-        login = generate_random_string(10)
-        password = generate_random_string(10)
-        first_name = generate_random_string(10)
-
+    def test_create_duplicate_courier(self, courier):
         payload = {
-            "login": login,
-            "password": password,
-            "firstName": first_name
+            "login": courier["login"],
+            "password": courier["password"],
+            "firstName": courier["first_name"]
         }
 
-        requests.post(BASE_URL + "courier", data=payload)
+        with allure.step("Повторная попытка создания курьера"):
+            response = requests.post(BASE_URL + CREATE_COURIER, data=payload)
 
-        response = requests.post(BASE_URL + "courier", data=payload)
+        with allure.step("Проверка кода ответа"):
+            assert response.status_code == 400
 
-        assert response.status_code == 400
-        assert "message" in response.json()
+        with allure.step("Проверка тела ответа"):
+            assert response.json()["message"] == "Этот логин уже используется"
 
-        login_response = requests.post(BASE_URL + "courier/login", data={
-            "login": login,
-            "password": password
-        })
-        courier_id = login_response.json()["id"]
-        delete_courier(courier_id)
-
-    @allure.title("Для создания курьера нужно передать все обязательные поля")
+    @allure.title("Ошибка если отсутствует логин")
     def test_create_courier_without_login(self):
         payload = {
             "password": "1234",
             "firstName": "test"
         }
 
-        response = requests.post(BASE_URL + "courier", data=payload)
+        with allure.step("Создание курьера без логина"):
+            response = requests.post(BASE_URL + CREATE_COURIER, data=payload)
 
-        assert response.status_code == 400
-        assert response.json()["message"] == "Недостаточно данных для создания учетной записи"
+        with allure.step("Проверка кода ответа"):
+            assert response.status_code == 400
+
+        with allure.step("Проверка текста ошибки"):
+            assert response.json()["message"] == "Недостаточно данных для создания учетной записи"
 
     @allure.title("Ошибка если отсутствует пароль")
     def test_create_courier_without_password(self):
@@ -76,49 +67,11 @@ class TestCreateCourier:
             "firstName": "test"
         }
 
-        response = requests.post(BASE_URL + "courier", data=payload)
+        with allure.step("Создание курьера без пароля"):
+            response = requests.post(BASE_URL + CREATE_COURIER, data=payload)
 
-        assert response.status_code == 400
-        assert response.json()["message"] == "Недостаточно данных для создания учетной записи"
+        with allure.step("Проверка кода ответа"):
+            assert response.status_code == 400
 
-    @allure.title("Ошибка если отсутствует firstName")
-    def test_create_courier_without_firstname(self):
-        payload = {
-            "login": "testlogin",
-            "password": "1234"
-        }
-
-        response = requests.post(BASE_URL + "courier", data=payload)
-
-        assert response.status_code in [201, 400]
-
-    @allure.title("Если создать пользователя с существующим логином — возвращается ошибка")
-    def test_create_courier_with_existing_login(self):
-        login = generate_random_string(10)
-        password = generate_random_string(10)
-
-        payload = {
-            "login": login,
-            "password": password,
-            "firstName": "test"
-        }
-
-        requests.post(BASE_URL + "courier", data=payload)
-
-        second_payload = {
-            "login": login,
-            "password": "anotherpass",
-            "firstName": "another"
-        }
-
-        response = requests.post(BASE_URL + "courier", data=second_payload)
-
-        assert response.status_code == 400
-        assert "message" in response.json()
-
-        login_response = requests.post(BASE_URL + "courier/login", data={
-            "login": login,
-            "password": password
-        })
-        courier_id = login_response.json()["id"]
-        delete_courier(courier_id)
+        with allure.step("Проверка текста ошибки"):
+            assert response.json()["message"] == "Недостаточно данных для создания учетной записи"

@@ -1,8 +1,7 @@
 import requests
 import random
 import string
-
-BASE_URL = "https://qa-scooter.praktikum-services.ru/api/v1/"
+from urls import BASE_URL, CREATE_COURIER, DELETE_COURIER
 
 
 def generate_random_string(length):
@@ -21,7 +20,7 @@ def register_new_courier_and_return_login_password():
         "firstName": first_name
     }
 
-    response = requests.post(BASE_URL + "courier", data=payload)
+    response = requests.post(BASE_URL + CREATE_COURIER, data=payload)
 
     if response.status_code == 201:
         return [login, password, first_name]
@@ -29,4 +28,4 @@ def register_new_courier_and_return_login_password():
 
 
 def delete_courier(courier_id):
-    requests.delete(BASE_URL + f"courier/{courier_id}")
+    requests.delete(BASE_URL + DELETE_COURIER.format(courier_id))
